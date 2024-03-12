@@ -1,0 +1,210 @@
+2024/01/17
+	對目前研究進度做總結，分成文檔編排、命名原則...
+	以下為目前專案的文檔編排：
+	/評論生成
+	|-- /asset	(文件存放區)
+	|	|-- /Go_DB_original	(原始資料集，不會做更動，備份用)
+	|	|-- /Go_DB			(初始資料集，已做處理[請見異常紀錄1])
+	|	|-- /GO_R2C_DB		(輸入資料集，兩行為一組，內容為"棋步及對映的評論")
+	|	|-- /Go_DB_for_test	(測試用)
+	|	|-- custom_dict.txt	(中文斷詞用，自定義辭典)
+	|	|-- stop_words.txt	(中文斷詞用，停用字)
+	|	`-- (其他)
+	|
+	|-- /src	(程式存放區)
+	|	|-- /config			(設定檔)
+	|	|	`-- config.py
+	|	|-- /dataset		(資料檔)
+	|	|	`-- dataset.py
+	|	|-- /model			(模組區)
+	|	|	|-- Dataset.py (自定義資料集)
+	|	|	|-- Encoder.py	(編碼器)
+	|	|	|-- Decoder.py	(解碼器)
+	|	|	`-- Seq2Seq.py	(序列轉換模型)
+	|	|-- /temp			(暫存用)
+	|	|	|-- XXX.dict
+	|	|	`-- XXX.model
+	|	|-- sgf_transform_R2C.py	(將 初始資料 轉換成 輸入資料)
+	|	|-- creat_word2vec.py		(將 輸入資料R2C 轉換成 Word2Vec並儲存成model )
+	|	|-- train.py				(訓練模型)
+	|	|-- test.py					(測試用)
+	|	`-- (其他)
+	|
+	|-- /README
+	|	|-- 開發日誌.log
+	|	|-- 異常紀錄.txt
+	|	|-- 研究日誌.txt
+	|	`-- 棋譜檔案集整理文件.xlsx
+	`-- /參考文獻
+
+	以下為目前專案的命名原則：
+		部分縮寫意思:
+		Go	-> 圍棋
+		DB	-> 資料庫
+		sgf	-> Smart Game Format File
+		R -> Records 紀錄
+		C -> Commend 註解
+		R2C	-> Records to Commend
+		W2V	-> Word2Vec
+----------------------------------------------------------------------------------------------------	
+	本週進度：
+		• logging 日誌除錯紀錄 (未使用，異常2)
+		• 建立日誌
+		• dataset建立 (取消以doc、dict及w2v_model錯誤的方式當作測資)
+		• 解決torch套件問題(疑似與pandas版本更新有關)
+	
+	正在處理：
+		• Encoder.py：__init__	(暫且沒問題)
+		• Encoder.py：forward	(暫且沒問題)
+	
+	錯誤事件：
+		• Encoder.py：
+			(已解決)RuntimeError: For unbatched 2-D input, hx and cx should also be 2-D but got (3-D, 3-D) tensors
+				張量問題
+			(已解決)RuntimeError: Expected hidden[0] size (2, 10, 256), got [2, 32, 256]
+				seq_length 輸入及model長度不合錯誤
+	代辦事項：
+		• Decoder.py
+		• Seq2Seq.py
+		• train.py
+====================================================================================================
+2024/01/24
+	本週進度：
+		• Dataset.py
+			配合 Trainer 修改
+		• Trainer.py
+			調整 Dataset、優化器、損失函數
+		• Word2Vec
+			針對comment及record各自重建文字向量模型
+		
+	正在處理：
+		• Trainer 訓練迴圈
+	
+	錯誤事件：
+		• Trainer.py
+			(待處理)trainer.train_epoch(train_dataloader)：
+			1. 張量問題，Dataset.__getitem__()的格式不符合DataLoader()格式
+				self.records[index], self.comments[index]
+				>>ValueError: too many values to unpack (expected 2)
+			
+			2. 以torch.tensor解決，此方法不支援字串
+				torch.tensor(self.records[index]), torch.tensor(self.comments[index])
+				>>TypeError: new(): invalid data type 'str'
+			
+			3. 建立一個字典，將輸入字串轉換成數值向量，無索引值
+				>>KeyError: 'Bqq'or'Wnq'
+				>>KeyError: '结'or'简'	
+	代辦事項：
+		• (已解決)將輸入頻論先做斷詞
+		• DDP train for GPU
+====================================================================================================
+2024/01/31
+	本週進度：
+		• dataset 頻論先做斷詞(上週問題修正)
+		• 更新 jieba 的斷詞、停用字
+		• 更新 w2v.model (另存)
+		• 新增 <SOS>、<EOS> 處理(在建立w2v斷詞時做處理)
+		• 新增 <UNK> 處理
+		
+	正在處理：
+		• <PAD> 處理
+		• Trainer train_step、訓練迴圈，Dataset/Train collate_fn
+		• 重新檢視 訓練迴圈 的輸入及使用的詞向量模型！！！
+	
+	錯誤事件：
+		• KeyError
+			>> Case1：訓練輸入時 w2v 內無詞彙
+				`-> 在__getitem__()時做 <UNK> 例外處理
+			>> Case2：w2v 沒有 <UNK
+				`-> 建立dataset時做Dict新增
+			
+		• RuntimeError: stack expects each tensor to be equal size, but got [0] at entry 0 and [1] at entry 1
+		  RuntimeError: stack expects each tensor to be equal size, but got [2] at entry 0 and [3] at entry 1
+			>> 堆疊張量問題
+				`-> 需用 <PAD> 解決 (?
+					• ValueError: too many values to unpack (expected 2)
+						`-> 先改以單句輸入做偵錯
+							• TypeError: iteration over a 0-d tensor
+		
+	代辦事項：
+		• 以預設形式加入SOS、EOS、PAD、UNK 到 word2vec 中
+			SOS : Decoder 的啟動信號
+			EOS : Decoder 的終止信號
+			PAD : 因為每個 batch 的單字長度要一致，所以我們要用 PAD 來填充過短的單字
+			UNK : 如果輸入字元沒在字典裡出現過，就用 UNK 的索引替代它
+		
+		• 新增 <PAD> 處理
+		• 畫流程圖、OO架構圖
+		
+	註記：
+		• WUAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA！
+====================================================================================================
+2024/02/14
+	本週進度：
+		• 新增 seq_Translator 除錯用將 w2v 轉換回原始字符串
+		• 在 word2vec 中修改成，以預設形式加入 SOS、EOS、PAD、UNK 詞彙
+		• 新增並檢查 <PAD> 處理
+		• (暫時成功)修改 Encoder、Decoder、Seq2Seq 中的 forward()
+		• 修改 Encoder embedding 的方式
+		• 重寫 train_epoch、train_step、batch_size 的過程(?
+	正在處理：
+		• 重新檢視 訓練迴圈 的輸入及使用的詞向量模型！！！
+		• 檢查 Trainer train_step、訓練迴圈，Dataset/Train collate_fn
+		• 
+	錯誤事件：
+		• 主要為 batch_size、hidden、hidden_size 問題
+			RuntimeError: Expected hidden[0] size (1, 350, 256), got [2, 225, 256] (處理：新增initial_hidden 給 LSTM hidden)
+			RuntimeError: Expected hidden[0] size (2, 164, 256), got [2, 32, 256]
+			RuntimeError: Expected hidden[0] size (2, 219, 256), got [2, 32, 256]
+		
+			size(A,B,C)=(num_layers, batch_size, hidden_size)?
+			
+			embedding -> IndexError: index out of range in self
+			
+			RuntimeError: For unbatched 2-D input, hx and cx should also be 2-D but got (3-D, 3-D) tensors
+			RuntimeError: For batched 3-D input, hx and cx should also be 3-D but got (4-D, 4-D) tensors
+			
+			目前問題：
+				seq 傳遞的張量及 hidden的傳遞有誤
+		
+	代辦事項：
+		• 畫流程圖、OO架構圖
+		• DDP train for GPU
+====================================================================================================
+2024/02/28
+本週進度：
+		• 完成及檢查 Trainer train_model 的個各步驟
+		• seq2seq model version.1 成功
+			`-> ( hidden_size, num_layers, batch_size, enpochs) = (256,2,3,1)
+		• DDP train for GPU 處理失敗
+	正在處理：
+		• save seq2seq model 完無法使用
+			`-> 缺少 evaluate
+		• 檢查 Encoder、Decoder、Seq2Seq 傳遞 hidden 的 tensor
+		• 
+	錯誤事件：
+		• Decoder, forward, hidden 張量問題
+		• Trainer, train_step, loss = self.criterion()內能是 tensor 
+		
+	代辦事項：
+		• 畫流程圖、OO架構圖
+====================================================================================================
+2024/02/28
+本週進度：
+		• 
+		• 
+		• 
+	正在處理：
+		• 
+		• 
+		• 
+	錯誤事件：
+		• RuntimeError: shape '[2, 88, 256]' is invalid for input of size 90112
+		• RuntimeError: [enforce fail at C:\b\...\alloc_cpu.cpp:81] data. DefaultCPUAllocator: not enough memory: you tried to allocate 9169797120 bytes.
+		• 
+		
+	代辦事項：
+		• 
+		• 
+		• 
+		• 畫流程圖、OO架構圖

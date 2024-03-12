@@ -1,0 +1,39 @@
+異常紀錄1:
+	UnicodeDecodeError: 'cp950' codec can't decode byte 0xbf in position 2: illegal multibyte sequence
+	發生原因：某個字元未被記在 code page 950 (cp950) 內，所以無法編碼寫檔。
+	無法正常建立sgf_game 檔案： r'[^A-Z|\]]\[.*?\]'狀況
+	
+	AI005	[u'be:A']
+	DT001	日[日失]未 = 昳；则[口台]台 = 咍
+	DT004	['rm:a', 'mk:b']
+	DT010	[u'dk:a']
+	WU002	[u'jc:A', u'qf:B', u'nd:C', u'rd:D']
+	WU005	[u'ic:A']
+	WU007	[u'qk:A']；[u'hm']
+	WU012	[u'df:a']
+	WU016	[u'eh:A', u'ic:B', u'id:C', u'hb:D']
+	
+	共計33個檔案，9個異常檔案，11個引發異常狀況。
+	
+	若 更改成 r'[^A-Z|\]|\s]\[.*?\]'
+	則只有DT001有狀況
+
+	目前以手動修正(刪除引發異常狀況)處理
+------------------------------------------------------------
+異常紀錄2:
+	建立 .dict 後，使用時會出現此錯誤
+	UnicodeEncodeError: 'cp950' codec can't encode character '\u56f4' in position 97: illegal multibyte sequence
+	
+	目前以其他方法迴避該異常，取消用建立的 .dict 
+	猜測與【生僻字】有關，未證實
+------------------------------------------------------------
+異常紀錄3:
+	套件版本問題(?)，為 torch.utils 引發此錯誤
+	AttributeError: partially initialized module 'fsspec' has no attribute 'utils' (most likely due to a circular import)
+	
+	在更新完pandas後解決(?
+------------------------------------------------------------
+異常紀錄4:
+	
+
+結尾
