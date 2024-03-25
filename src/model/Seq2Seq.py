@@ -19,7 +19,7 @@ class Seq2Seq(nn.Module):
     """
     此這版本的 LSTM of Encoder/Decoder 輸入已改為多個詞彙逐一輸入，如：[詞索引]、[詞索引]、...、[詞索引] (逐一輸入)
     此模型為 more-more 的結構，修改內容為 Encoder/Decoder forward
-    注意！ Encoder已完成，Decoder已完成，evaluate已完成！
+    注意！ Encoder已完成，Decoder已完成，evaluate部分實作中...
     """ 
     def forward(self, input_seq, target_seq, initial_hidden=None):
         encoder_batch_size  = input_seq.size(0)
