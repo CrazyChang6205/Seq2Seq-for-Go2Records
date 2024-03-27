@@ -17,8 +17,12 @@ class Encoder(nn.Module):
         #NOTE：LSTM(input_size, hidden_size, num_layers) 為 ( 輸入層 特徵維度, 隱藏層、輸出層 特徵維度, 網路層數 )
         
     def forward(self, input_seq, hidden):
+        output = None
+        PAD_vocab = torch.tensor(self.word2vec_model.wv.key_to_index["<PAD>"])
         for seq_index in range(input_seq.size(1)):
             input_vocab = input_seq[0][seq_index]
+            if input_vocab == PAD_vocab:
+                continue
             embedded = self.embedding(input_vocab).view(1, 1, -1)
             output, hidden = self.lstm(embedded, hidden)
         return output, hidden

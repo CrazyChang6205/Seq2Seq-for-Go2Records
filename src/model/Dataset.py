@@ -23,13 +23,11 @@ class Custom_Dataset(Dataset):
         dataset = []
         try:
             with open(file_path, mode='r', encoding='UTF-8') as R2C_file:
-                SOS = "<SOS> "
-                EOS = " <EOS>"
                 lines = R2C_file.readlines()
                 for i in range(0, len(lines), 2):
                     comment_line = lines[i].strip()
                     records_line = lines[i+1].strip() if i+1 < len(lines) else None
-                    dataset.append([ SOS + records_line + EOS, SOS + comment_line + EOS ])
+                    dataset.append([ records_line , comment_line ])
                     if records_line is None:
                         print(f'Comment: {comment_line}\nNo Records\n')
         except FileNotFoundError:
